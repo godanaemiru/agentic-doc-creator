@@ -31,3 +31,5 @@ generateDocx(
     "This is a test paragraph",
     "Test_Report"
 );
+
+module.exports = { generateDocx };
