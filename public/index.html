@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kolaborate Agentic Creator</title>
+    <style>
+        :root { --brand: #2A8A34; --accent: #1E6B25; --bg: #ECF0F1; }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; color: #333; }
+        .container { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 650px; backdrop-filter: blur(10px); }
+        
+        .header { text-align: center; margin-bottom: 20px; }
+        .header img { height: 70px; margin-bottom: 10px; }
+        h1 { margin-top: 0; color: var(--brand); font-size: 28px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        p.subtitle { color: #7f8c8d; margin-bottom: 25px; text-align: center; }
+        
+        /* File Type Selector */
+        .type-selector { display: flex; gap: 10px; margin-bottom: 20px; }
+        .type-selector input[type="radio"] { display: none; }
+        .type-selector label { flex: 1; text-align: center; padding: 12px; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; font-weight: 600; color: #95a5a6; transition: all 0.2s ease; }
+        .type-selector input[type="radio"]:checked + label { background: var(--brand); border-color: var(--brand); color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(42, 138, 52, 0.3); }
+
+        textarea { width: 100%; height: 120px; padding: 15px; border: 2px solid #e9ecef; border-radius: 8px; margin-bottom: 20px; font-size: 16px; box-sizing: border-box; resize: vertical; transition: border-color 0.3s; }
+        textarea:focus { outline: none; border-color: var(--brand); }
+        
+        button { background-color: var(--brand); color: white; border: none; padding: 15px 20px; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; width: 100%; transition: background-color 0.3s; }
+        button:hover { background-color: var(--accent); }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        
+        #status { margin-top: 20px; font-weight: 600; text-align: center; padding: 15px; border-radius: 8px; display: none; }
+        .status-loading { background: #fff3cd; color: #856404; display: block !important; }
+        .status-success { background: #d4edda; color: #155724; display: block !important; }
+        .status-error { background: #f8d7da; color: #721c24; display: block !important; }
+
+        .feedback-zone { margin-top: 30px; padding-top: 25px; border-top: 2px dashed #bdc3c7; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="logo.png" alt="Kolaborate Logo">
+        <h1>AI Document Agent</h1>
+    </div>
+    <p class="subtitle">Select a format and describe your document. The agent will research and build it autonomously.</p>
+    
+    <div class="type-selector">
+        <input type="radio" id="type-pptx" name="fileType" value="pptx" checked>
+        <label for="type-pptx">📊 Presentation</label>
+        
+        <input type="radio" id="type-docx" name="fileType" value="docx">
+        <label for="type-docx">📄 Word Doc</label>
+        
+        <input type="radio" id="type-pdf" name="fileType" value="pdf">
+        <label for="type-pdf">📑 PDF</label>
+
+        <input type="radio" id="type-excel" name="fileType" value="excel">
+        <label for="type-excel">📈 Excel</label>
+    </div>
+    
+    <textarea id="promptInput" placeholder="e.g., Create a presentation about the history of Artificial Intelligence."></textarea>
+    <button onclick="generateDoc()" id="genBtn">Research & Generate File</button>
+    
+    <div id="status"></div>
+
+    <div class="feedback-zone" id="feedbackZone">
+        <h3 style="color: var(--brand); margin-top:0;">🧠 Teach the Agent (Memory Loop)</h3>
+        <p style="color: #7f8c8d; font-size: 14px;">Did it miss a brand guideline? Give it feedback for next time.</p>
+        <textarea id="feedbackInput" style="height: 80px;" placeholder="e.g., Ensure all slide titles are uppercase."></textarea>
+        <button style="background-color: #9b59b6;" onclick="submitFeedback()">Save to Agent Memory</button>
+    </div>
+</div>
+
+<script>
+    async function generateDoc() {
+        const prompt = document.getElementById('promptInput').value;
+        const fileType = document.querySelector('input[name="fileType"]:checked').value;
+        
+        if (!prompt) return alert("Please enter a prompt.");
+        
+        const statusEl = document.getElementById('status');
+        statusEl.className = 'status-loading';
+        statusEl.innerHTML = "⏳ Agent is researching and compiling data...";
+        document.getElementById('genBtn').disabled = true;
+        document.getElementById('feedbackZone').style.display = 'none';
+
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, fileType }) 
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                statusEl.className = 'status-success';
+                statusEl.innerHTML = `✅ Success! File saved to project folder: <b>${data.fileName}</b>`;
+                document.getElementById('feedbackZone').style.display = 'block';
+            } else {
+                statusEl.className = 'status-error';
+                statusEl.innerHTML = `❌ Error: ${data.message}`;
+            }
+        } catch (err) {
+            statusEl.className = 'status-error';
+            statusEl.innerHTML = `❌ Server Error. Check terminal.`;
+        }
+        document.getElementById('genBtn').disabled = false;
+    }
+
+    async function submitFeedback() {
+        const feedback = document.getElementById('feedbackInput').value;
+        if (!feedback) return;
+        await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feedback }) });
+        alert("✅ Rule permanently saved to Long-Term Memory!");
+        document.getElementById('feedbackInput').value = "";
+    }
+</script>
+
+</body>
+</html>
